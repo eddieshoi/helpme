@@ -159,28 +159,51 @@ with col2:
                     img_array = image.resize((224, 224))
                     img_array = np.array(img_array).astype("float32") / 255.0
                     img_array = np.expand_dims(img_array, axis=0)
-                    
+
+                    logits = model(img_array, training=False)  # shape: (1, num_classes)
+                    # 4. softmax로 확률 계산
+                    probs = tf.nn.softmax(logits, axis=-1).numpy()[0]  # (num_classes,)
+                    class_names = ["calm", "cold", "lonely", "warm"]
+
+                    # 5. 가장 확률 높은 클래스 + confidence
+                    pred_class = int(np.argmax(probs))
+                    confidence = float(probs[pred_class])
+                    print(pred_class)
+                    print(confidence)
+
+                    print("predicted class index:", pred_class)
+                    print("confidence:", confidence)
+
+                    class_names = ["calm", "cold", "lonely", "warm"]
+                    print("predicted label:", class_names[pred_class])
+                    print("confidence:", float(confidence))
+
                     predictions = model.predict(img_array)
+                    print(predictions)
                     probabilities = tf.nn.softmax(predictions).numpy()[0]
-                    class_names = ['Angry', 'Calm', 'Happy'] # 순서 확인 필요
+                    class_names = ["calm", "cold", "lonely", "warm"] # 순서 확인 필요
                     
                     idx = np.argmax(probabilities)
                     emotion = class_names[idx]
                     
-                    # 결과 디자인
+                    # 결과 디자인 ###################### 이부분 class에 맞게 modify 필요합니다.
                     st.divider()
-                    if emotion == 'Happy':
-                        st.markdown("<h2 style='color: #d97706;'>🌞 Happy</h2>", unsafe_allow_html=True)
+                    if emotion == 'calm':
+                        st.markdown("<h2 style='color: #d97706;'>🍃 calm</h2>", unsafe_allow_html=True)
                         st.write("Radiant warmth and joy detected.")
-                        st.audio("happy.m4a")
-                    elif emotion == 'Angry':
-                        st.markdown("<h2 style='color: #dc2626;'>🔥 Intense</h2>", unsafe_allow_html=True)
-                        st.write("Strong energy and intensity detected.")
-                        st.audio("sad.m4a")
-                    elif emotion == 'Calm':
-                        st.markdown("<h2 style='color: #059669;'>🍃 Calm</h2>", unsafe_allow_html=True)
-                        st.write("Peaceful balance and serenity.")
                         st.audio("calm.m4a")
-                        
+                    elif emotion == 'warm':
+                        st.markdown("<h2 style='color: #dc2626;'>🔥 warm</h2>", unsafe_allow_html=True)
+                        st.write("Strong energy and intensity detected.")
+                        st.audio("calm.m4a")
+                    elif emotion == 'cold':
+                        st.markdown("<h2 style='color: #059669;'>🌞 cold</h2>", unsafe_allow_html=True)
+                        st.write("Freezing cold.")
+                        st.audio("calm.m4a")
+                    elif emotion == 'lonely':
+                        st.markdown("<h2 style='color: #059669;'>🌞 lonely</h2>", unsafe_allow_html=True)
+                        st.write("Lonely.")
+                        st.audio("calm.m4a")
+
         except Exception as e:
             st.error(f"오류가 발생했습니다. 구글 드라이브 ID를 코드에 넣었는지 확인해주세요: {e}")
