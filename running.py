@@ -9,7 +9,7 @@ import os
 import gdown
 
 # ==========================================
-# 0. 디자인 복구 (CSS 강제 주입)
+# 0. 디자인 및 설정 (건드리지 않음)
 # ==========================================
 st.set_page_config(page_title="Shadow Play", page_icon="🌗", layout="wide")
 
@@ -18,20 +18,15 @@ st.markdown("""
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
 
-    /* 전체 폰트 및 배경 설정 */
     html, body, [class*="css"] {
         font-family: 'Pretendard', sans-serif;
         background-color: #ffffff;
         color: #1c1917;
     }
-    
-    /* 제목 스타일 (Playfair Display) */
     h1, h2, h3 {
         font-family: 'Playfair Display', serif !important;
         font-weight: 400;
     }
-    
-    /* 버튼 스타일 (검은색 모던한 버튼) */
     .stButton > button {
         background-color: #111111 !important;
         color: white !important;
@@ -44,23 +39,19 @@ st.markdown("""
         transform: scale(1.02);
         background-color: #333 !important;
     }
-
-    /* 파일 업로더 스타일 */
     .stFileUploader {
         border: 2px dashed #e5e7eb;
         border-radius: 16px;
         padding: 20px;
         text-align: center;
     }
-
-    /* 상단 헤더 숨기기 (깔끔하게) */
     header {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 1. 모델 부품 (Custom Layer)
+# 1. Custom Layers (건드리지 않음)
 # ==========================================
 @keras.saving.register_keras_serializable()
 class Patches(layers.Layer):
@@ -102,13 +93,11 @@ class PatchEncoder(layers.Layer):
         return config
 
 # ==========================================
-# 2. 대용량 모델 다운로드 (구글 드라이브)
+# 2. 모델 로드 (건드리지 않음)
 # ==========================================
 @st.cache_resource
 def load_model_from_drive():
-    # 🚨 구글 드라이브 파일 ID (사용자님 코드 그대로 유지)
     file_id = '1QXUnKa3uCbK7kqgkXULYuEox0HGaE6hy' 
-    
     url = f'https://drive.google.com/uc?id={file_id}'
     output = 'final_model.keras'
     
@@ -120,11 +109,11 @@ def load_model_from_drive():
     return model
 
 # ==========================================
-# 3. 화면 구성
+# 3. 화면 구성 및 로직 (요청하신 부분 수정됨)
 # ==========================================
 
 st.markdown("<h1 style='font-size: 3rem; margin-bottom: 0;'>For Visually Impaired,<br>Reading the Emotion Within.</h1>", unsafe_allow_html=True)
-st.markdown("<p style='color: #4b5563; margin-bottom: 40px;'>AI-POWERED SHADOW ANALYSIS</p>", unsafe_allow_html=True)
+st.markdown("<p style='color: #4b5563; margin-bottom: 40px;'>AI-POWERED SCENERY ANALYSIS</p>", unsafe_allow_html=True)
 
 col1, col2 = st.columns([1, 1])
 
@@ -133,7 +122,7 @@ with col1:
     <div style='border-top: 1px solid #e5e5e5; padding-top: 20px; margin-top: 20px;'>
         <p style='font-family: Playfair Display; font-style: italic; color: #9ca3af;'>Discover the unseen</p>
         <p style='line-height: 1.7; color: #4b5563;'>
-            Every shadow tells a story. Shadow Play uses advanced AI to reveal the hidden emotional landscape within your images—transforming light and darkness into profound insight.
+            Every Scenery tells a story. Scenery Analysis uses advanced AI to reveal the hidden emotional landscape wit hin your images—transforming light and darkness into profound insight.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -150,29 +139,24 @@ with col2:
             
             if st.button("Analyze Emotion"):
                 with st.spinner('Analyzing shadow contours...'):
-                    # ---------------------------------------------------------
-                    # [START] 요청하신 로직 적용 부분
-                    # ---------------------------------------------------------
-                    
-                    # 1. 전처리 (기존 로직 유지)
+                    # 1. 이미지 전처리
+                    # 🚨 [Warm 문제 해결] 0~1 대신 -1~1 범위로 변경 (자바스크립트와 통일)
                     img_array = image.resize((224, 224))
-                    img_array = np.array(img_array).astype("float32") / 255.0
+                    img_array = np.array(img_array).astype("float32")
+                    img_array = (img_array / 127.5) - 1.0 
                     img_array = np.expand_dims(img_array, axis=0)
 
-                    # 2. Logits 추출 및 Sigmoid 변환 (요청 코드 반영)
+                    # 2. Logits 추출 및 Sigmoid 변환 (요청하신 로직 적용)
                     logits = model(img_array, training=False)
                     probs = tf.nn.sigmoid(logits)
                     probs_np = probs.numpy()[0]
-
-                    class_names = ["calm", "cold", "lonely", "warm"]
                     
-                    # 확률 출력 (디버깅용)
-                    # print("Original probs:", probs_np)
+                    class_names = ["calm", "cold", "lonely", "warm"]
 
-                    # 3. 확률 수정 로직 (요청하신 알고리즘 그대로 적용)
+                    # 3. 확률 재분배 로직 (요청하신 코드 그대로 삽입)
                     probs_np = probs_np.copy()
-                    c = 2  # 'lonely' index
-
+                    c = 2  # lonely index
+                    
                     if probs_np[c] == probs_np.max():
                         original = probs_np[c]
                         take = probs_np[c] / 2.0
@@ -185,18 +169,12 @@ with col2:
                                     probs_np[i] += take * (probs_np[i] / total_other)
                                 if i == c:
                                     probs_np[i] += take * (original / total_other)
-                    
-                    # print("Modified probs:", probs_np)
 
-                    # 4. 최종 예측 클래스 결정
-                    prediction_index = np.argmax(probs_np)
-                    emotion = class_names[prediction_index]
+                    # 4. 최종 결과 결정
+                    prediction = np.argmax(probs_np)
+                    emotion = class_names[prediction]
                     
-                    # ---------------------------------------------------------
-                    # [END] 요청하신 로직 적용 완료
-                    # ---------------------------------------------------------
-                    
-                    # 결과 디자인
+                    # 5. 결과 보여주기
                     st.divider()
                     if emotion == 'calm':
                         st.markdown("<h2 style='color: #d97706;'>🍃 calm</h2>", unsafe_allow_html=True)
@@ -205,15 +183,15 @@ with col2:
                     elif emotion == 'cold':
                         st.markdown("<h2 style='color: #dc2626;'>🔥 cold</h2>", unsafe_allow_html=True)
                         st.write("Freezing cold.")
-                        st.audio("calm.m4a")
+                        st.audio("sad.m4a") # 음악 매핑 확인 필요
                     elif emotion == 'lonely':
-                        st.markdown("<h2 style='color: #059669;'>🌞 lonely</h2>", unsafe_allow_html=True)
+                        st.markdown("<h2 style='color: #059669;'>🌑 lonely</h2>", unsafe_allow_html=True)
                         st.write("Lonely.")
-                        st.audio("calm.m4a")
+                        st.audio("sad.m4a") # 음악 매핑 확인 필요
                     elif emotion == 'warm':
-                        st.markdown("<h2 style='color: #059669;'>🌞 warm</h2>", unsafe_allow_html=True)
+                        st.markdown("<h2 style='color: #ea580c;'>🌞 warm</h2>", unsafe_allow_html=True)
                         st.write("Strong energy and intensity detected.")
-                        st.audio("calm.m4a")
+                        st.audio("happy.m4a") # 음악 매핑 확인 필요
 
         except Exception as e:
             st.error(f"오류가 발생했습니다.: {e}")
