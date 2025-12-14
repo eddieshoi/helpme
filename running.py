@@ -1,0 +1,219 @@
+import streamlit as st
+import tensorflow as tf
+import keras
+from keras import layers
+from keras import ops
+import numpy as np
+from PIL import Image
+import os
+import gdown
+
+# ==========================================
+# 0. 디자인 복구 (CSS 강제 주입)
+# ==========================================
+st.set_page_config(page_title="Shadow Play", page_icon="🌗", layout="wide")
+
+st.markdown("""
+<style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
+
+    /* 전체 폰트 및 배경 설정 */
+    html, body, [class*="css"] {
+        font-family: 'Pretendard', sans-serif;
+        background-color: #ffffff;
+        color: #1c1917;
+    }
+    
+    /* 제목 스타일 (Playfair Display) */
+    h1, h2, h3 {
+        font-family: 'Playfair Display', serif !important;
+        font-weight: 400;
+    }
+    
+    /* 버튼 스타일 (검은색 모던한 버튼) */
+    .stButton > button {
+        background-color: #111111 !important;
+        color: white !important;
+        border-radius: 50px !important;
+        padding: 10px 30px !important;
+        border: none !important;
+        transition: transform 0.2s;
+    }
+    .stButton > button:hover {
+        transform: scale(1.02);
+        background-color: #333 !important;
+    }
+
+    /* 파일 업로더 스타일 */
+    .stFileUploader {
+        border: 2px dashed #e5e7eb;
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+    }
+
+    /* 상단 헤더 숨기기 (깔끔하게) */
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# 1. 모델 부품 (Custom Layer)
+# ==========================================
+@keras.saving.register_keras_serializable()
+class Patches(layers.Layer):
+    def __init__(self, patch_size=6, **kwargs):
+        super().__init__(**kwargs)
+        self.patch_size = patch_size
+    def call(self, images):
+        input_shape = ops.shape(images)
+        batch_size = input_shape[0]
+        height = input_shape[1]
+        width = input_shape[2]
+        channels = input_shape[3]
+        num_patches_h = height // self.patch_size
+        num_patches_w = width // self.patch_size
+        patches = keras.ops.image.extract_patches(images, size=self.patch_size)
+        patches = ops.reshape(patches, (batch_size, num_patches_h * num_patches_w, self.patch_size * self.patch_size * channels))
+        return patches
+    def get_config(self):
+        config = super().get_config()
+        config.update({"patch_size": self.patch_size})
+        return config
+
+@keras.saving.register_keras_serializable()
+class PatchEncoder(layers.Layer):
+    def __init__(self, num_patches=144, projection_dim=64, **kwargs):
+        super().__init__(**kwargs)
+        self.num_patches = num_patches
+        self.projection_dim = projection_dim
+        self.projection = layers.Dense(units=projection_dim)
+        self.position_embedding = layers.Embedding(input_dim=num_patches, output_dim=projection_dim)
+    def call(self, patch):
+        positions = ops.expand_dims(ops.arange(start=0, stop=self.num_patches, step=1), axis=0)
+        projected_patches = self.projection(patch)
+        encoded = projected_patches + self.position_embedding(positions)
+        return encoded
+    def get_config(self):
+        config = super().get_config()
+        config.update({"num_patches": self.num_patches, "projection_dim": self.projection_dim})
+        return config
+
+# ==========================================
+# 2. 대용량 모델 다운로드 (구글 드라이브)
+# ==========================================
+@st.cache_resource
+def load_model_from_drive():
+    # 🚨 구글 드라이브 파일 ID (사용자님 코드 그대로 유지)
+    file_id = '1QXUnKa3uCbK7kqgkXULYuEox0HGaE6hy' 
+    
+    url = f'https://drive.google.com/uc?id={file_id}'
+    output = 'final_model.keras'
+    
+    if not os.path.exists(output):
+        with st.spinner('모델 파일(248MB)을 다운로드 중입니다... 잠시만 기다려주세요.'):
+            gdown.download(url, output, quiet=False)
+    
+    model = tf.keras.models.load_model(output, custom_objects={'Patches': Patches, 'PatchEncoder': PatchEncoder})
+    return model
+
+# ==========================================
+# 3. 화면 구성
+# ==========================================
+
+st.markdown("<h1 style='font-size: 3rem; margin-bottom: 0;'>For Visually Impaired,<br>Reading the Emotion Within.</h1>", unsafe_allow_html=True)
+st.markdown("<p style='color: #4b5563; margin-bottom: 40px;'>AI-POWERED SHADOW ANALYSIS</p>", unsafe_allow_html=True)
+
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.markdown("""
+    <div style='border-top: 1px solid #e5e5e5; padding-top: 20px; margin-top: 20px;'>
+        <p style='font-family: Playfair Display; font-style: italic; color: #9ca3af;'>Discover the unseen</p>
+        <p style='line-height: 1.7; color: #4b5563;'>
+            Every shadow tells a story. Shadow Play uses advanced AI to reveal the hidden emotional landscape within your images—transforming light and darkness into profound insight.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    file = st.file_uploader("Upload Your Image", type=["jpg", "png", "jpeg"])
+
+    if file is not None:
+        image = Image.open(file).convert('RGB')
+        st.image(image, use_container_width=True)
+        
+        try:
+            model = load_model_from_drive()
+            
+            if st.button("Analyze Emotion"):
+                with st.spinner('Analyzing shadow contours...'):
+                    # ---------------------------------------------------------
+                    # [START] 요청하신 로직 적용 부분
+                    # ---------------------------------------------------------
+                    
+                    # 1. 전처리 (기존 로직 유지)
+                    img_array = image.resize((224, 224))
+                    img_array = np.array(img_array).astype("float32") / 255.0
+                    img_array = np.expand_dims(img_array, axis=0)
+
+                    # 2. Logits 추출 및 Sigmoid 변환 (요청 코드 반영)
+                    logits = model(img_array, training=False)
+                    probs = tf.nn.sigmoid(logits)
+                    probs_np = probs.numpy()[0]
+
+                    class_names = ["calm", "cold", "lonely", "warm"]
+                    
+                    # 확률 출력 (디버깅용)
+                    # print("Original probs:", probs_np)
+
+                    # 3. 확률 수정 로직 (요청하신 알고리즘 그대로 적용)
+                    probs_np = probs_np.copy()
+                    c = 2  # 'lonely' index
+
+                    if probs_np[c] == probs_np.max():
+                        original = probs_np[c]
+                        take = probs_np[c] / 2.0
+                        probs_np[c] -= take
+
+                        total_other = probs_np.sum() - probs_np[c]
+                        if total_other > 0:
+                            for i in range(len(probs_np)):
+                                if i != c:
+                                    probs_np[i] += take * (probs_np[i] / total_other)
+                                if i == c:
+                                    probs_np[i] += take * (original / total_other)
+                    
+                    # print("Modified probs:", probs_np)
+
+                    # 4. 최종 예측 클래스 결정
+                    prediction_index = np.argmax(probs_np)
+                    emotion = class_names[prediction_index]
+                    
+                    # ---------------------------------------------------------
+                    # [END] 요청하신 로직 적용 완료
+                    # ---------------------------------------------------------
+                    
+                    # 결과 디자인
+                    st.divider()
+                    if emotion == 'calm':
+                        st.markdown("<h2 style='color: #d97706;'>🍃 calm</h2>", unsafe_allow_html=True)
+                        st.write("Radiant warmth and joy detected.")
+                        st.audio("calm.m4a")
+                    elif emotion == 'cold':
+                        st.markdown("<h2 style='color: #dc2626;'>🔥 cold</h2>", unsafe_allow_html=True)
+                        st.write("Freezing cold.")
+                        st.audio("calm.m4a")
+                    elif emotion == 'lonely':
+                        st.markdown("<h2 style='color: #059669;'>🌞 lonely</h2>", unsafe_allow_html=True)
+                        st.write("Lonely.")
+                        st.audio("calm.m4a")
+                    elif emotion == 'warm':
+                        st.markdown("<h2 style='color: #059669;'>🌞 warm</h2>", unsafe_allow_html=True)
+                        st.write("Strong energy and intensity detected.")
+                        st.audio("calm.m4a")
+
+        except Exception as e:
+            st.error(f"오류가 발생했습니다.: {e}")
