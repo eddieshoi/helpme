@@ -191,7 +191,8 @@ with col2:
                     elif emotion == 'warm':
                         st.markdown("<h2 style='color: #ea580c;'>🌞 warm</h2>", unsafe_allow_html=True)
                         st.write("Strong energy and intensity detected.")
-                        st.audio("happy.m4a") # 음악 매핑 확인 필요
+                        st.audio("warm.m4a") # 음악 매핑 확인 필요
 
         except Exception as e:
             st.error(f"오류가 발생했습니다.: {e}")
+
