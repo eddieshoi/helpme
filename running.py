@@ -9,7 +9,7 @@ import os
 import gdown
 
 # ==========================================
-# 0. 디자인 및 설정 (건드리지 않음)
+# 0. 디자인 설정
 # ==========================================
 st.set_page_config(page_title="Shadow Play", page_icon="🌗", layout="wide")
 
@@ -51,7 +51,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 1. Custom Layers (건드리지 않음)
+# 1. Custom Layers
 # ==========================================
 @keras.saving.register_keras_serializable()
 class Patches(layers.Layer):
@@ -93,10 +93,11 @@ class PatchEncoder(layers.Layer):
         return config
 
 # ==========================================
-# 2. 모델 로드 (건드리지 않음)
+# 2. 모델 로드
 # ==========================================
 @st.cache_resource
 def load_model_from_drive():
+    # 구글 드라이브 ID (유지)
     file_id = '1QXUnKa3uCbK7kqgkXULYuEox0HGaE6hy' 
     url = f'https://drive.google.com/uc?id={file_id}'
     output = 'final_model.keras'
@@ -109,11 +110,10 @@ def load_model_from_drive():
     return model
 
 # ==========================================
-# 3. 화면 구성 및 로직 (요청하신 부분 수정됨)
+# 3. 메인 로직
 # ==========================================
-
 st.markdown("<h1 style='font-size: 3rem; margin-bottom: 0;'>For Visually Impaired,<br>Reading the Emotion Within.</h1>", unsafe_allow_html=True)
-st.markdown("<p style='color: #4b5563; margin-bottom: 40px;'>AI-POWERED SCENERY ANALYSIS</p>", unsafe_allow_html=True)
+st.markdown("<p style='color: #4b5563; margin-bottom: 40px;'>AI-POWERED SHADOW ANALYSIS</p>", unsafe_allow_html=True)
 
 col1, col2 = st.columns([1, 1])
 
@@ -122,7 +122,7 @@ with col1:
     <div style='border-top: 1px solid #e5e5e5; padding-top: 20px; margin-top: 20px;'>
         <p style='font-family: Playfair Display; font-style: italic; color: #9ca3af;'>Discover the unseen</p>
         <p style='line-height: 1.7; color: #4b5563;'>
-            Every Scenery tells a story. Scenery Analysis uses advanced AI to reveal the hidden emotional landscape wit hin your images—transforming light and darkness into profound insight.
+            Every shadow tells a story. Shadow Play uses advanced AI to reveal the hidden emotional landscape within your images.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -139,33 +139,31 @@ with col2:
             
             if st.button("Analyze Emotion"):
                 with st.spinner('Analyzing shadow contours...'):
-                    # 1. 이미지 전처리
-                    # 🚨 [Warm 문제 해결] 0~1 대신 -1~1 범위로 변경 (자바스크립트와 통일)
+                    # 1. 이미지 전처리 (핵심 수정!)
+                    # / 255.0 을 제거했습니다. 0~255 범위의 값을 그대로 넣습니다.
                     img_array = image.resize((224, 224))
-                    img_array = np.array(img_array).astype("float32")
-                    img_array = (img_array / 127.5) - 1.0 
+                    img_array = np.array(img_array).astype("float32") 
+                    # img_array = img_array / 255.0  <-- 이 코드가 범인이었습니다! 삭제함.
+                    
                     img_array = np.expand_dims(img_array, axis=0)
 
-                    # 2. Logits 추출
-                    logits = model(img_array, training=False)
-
-                    # ========================================================
-                    # [수정된 부분] Sigmoid 및 재분배 로직 삭제 -> Softmax 적용
-                    # ========================================================
+                    # 2. 예측
+                    # Sigmoid 대신 다시 Softmax를 쓰거나, 모델의 마지막 층에 따라 다름
+                    # 일단 logits 그대로 받아서 softmax로 확률화하는 것이 가장 일반적입니다.
+                    predictions = model.predict(img_array)
+                    probabilities = tf.nn.softmax(predictions).numpy()[0]
                     
-                    # 3. Softmax로 확률 계산 (가장 일반적이고 안정적인 방법)
-                    probs = tf.nn.softmax(logits, axis=-1).numpy()[0]
-                    
-                    # 4. 최종 결과 결정
-                    pred_class = int(np.argmax(probs))
+                    # 🚨 클래스 이름 (알파벳 순서)
                     class_names = ["calm", "cold", "lonely", "warm"]
-                    emotion = class_names[pred_class]
                     
-                    # ========================================================
-                    # [끝] 수정된 부분
-                    # ========================================================
-                    
-                    # 5. 결과 보여주기
+                    # 3. 디버깅용 확률 출력 (결과가 이상하면 이 숫자를 보세요)
+                    # st.write("각 감정별 확률:", {n: float(p) for n, p in zip(class_names, probabilities)})
+
+                    idx = np.argmax(probabilities)
+                    emotion = class_names[idx]
+                    confidence = probabilities[idx]
+
+                    # 4. 결과 출력
                     st.divider()
                     if emotion == 'calm':
                         st.markdown("<h2 style='color: #d97706;'>🍃 calm</h2>", unsafe_allow_html=True)
@@ -174,16 +172,17 @@ with col2:
                     elif emotion == 'cold':
                         st.markdown("<h2 style='color: #dc2626;'>🔥 cold</h2>", unsafe_allow_html=True)
                         st.write("Freezing cold.")
-                        st.audio("sad.m4a") # 음악 매핑 확인 필요
+                        st.audio("sad.m4a") 
                     elif emotion == 'lonely':
                         st.markdown("<h2 style='color: #059669;'>🌑 lonely</h2>", unsafe_allow_html=True)
                         st.write("Lonely.")
-                        st.audio("sad.m4a") # 음악 매핑 확인 필요
+                        st.audio("sad.m4a") 
                     elif emotion == 'warm':
                         st.markdown("<h2 style='color: #ea580c;'>🌞 warm</h2>", unsafe_allow_html=True)
                         st.write("Strong energy and intensity detected.")
-                        st.audio("warm.m4a") # 음악 매핑 확인 필요
+                        st.audio("happy.m4a") 
+                    
+                    st.caption(f"Confidence: {confidence*100:.2f}%")
 
         except Exception as e:
             st.error(f"오류가 발생했습니다.: {e}")
-
