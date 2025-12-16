@@ -146,33 +146,24 @@ with col2:
                     img_array = (img_array / 127.5) - 1.0 
                     img_array = np.expand_dims(img_array, axis=0)
 
-                    # 2. Logits 추출 및 Sigmoid 변환 (요청하신 로직 적용)
+                    # 2. Logits 추출
                     logits = model(img_array, training=False)
-                    probs = tf.nn.sigmoid(logits)
-                    probs_np = probs.numpy()[0]
+
+                    # ========================================================
+                    # [수정된 부분] Sigmoid 및 재분배 로직 삭제 -> Softmax 적용
+                    # ========================================================
                     
-                    class_names = ["calm", "cold", "lonely", "warm"]
-
-                    # 3. 확률 재분배 로직 (요청하신 코드 그대로 삽입)
-                    probs_np = probs_np.copy()
-                    c = 2  # lonely index
+                    # 3. Softmax로 확률 계산 (가장 일반적이고 안정적인 방법)
+                    probs = tf.nn.softmax(logits, axis=-1).numpy()[0]
                     
-                    if probs_np[c] == probs_np.max():
-                        original = probs_np[c]
-                        take = probs_np[c] / 2.0
-                        probs_np[c] -= take
-
-                        total_other = probs_np.sum() - probs_np[c]
-                        if total_other > 0:
-                            for i in range(len(probs_np)):
-                                if i != c:
-                                    probs_np[i] += take * (probs_np[i] / total_other)
-                                if i == c:
-                                    probs_np[i] += take * (original / total_other)
-
                     # 4. 최종 결과 결정
-                    prediction = np.argmax(probs_np)
-                    emotion = class_names[prediction]
+                    pred_class = int(np.argmax(probs))
+                    class_names = ["calm", "cold", "lonely", "warm"]
+                    emotion = class_names[pred_class]
+                    
+                    # ========================================================
+                    # [끝] 수정된 부분
+                    # ========================================================
                     
                     # 5. 결과 보여주기
                     st.divider()
