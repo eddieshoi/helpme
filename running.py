@@ -9,49 +9,98 @@ import os
 import gdown
 
 # ==========================================
-# 0. 디자인 설정
+# 0. 페이지 설정 & 고대비 모드 스위치
 # ==========================================
 st.set_page_config(page_title="Shadow Play", page_icon="🌗", layout="wide")
 
-st.markdown("""
-<style>
-    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Pretendard', sans-serif;
-        background-color: #ffffff;
-        color: #1c1917;
-    }
-    h1, h2, h3 {
-        font-family: 'Playfair Display', serif !important;
-        font-weight: 400;
-    }
-    .stButton > button {
-        background-color: #111111 !important;
-        color: white !important;
-        border-radius: 50px !important;
-        padding: 10px 30px !important;
-        border: none !important;
-        transition: transform 0.2s;
-    }
-    .stButton > button:hover {
-        transform: scale(1.02);
-        background-color: #333 !important;
-    }
-    .stFileUploader {
-        border: 2px dashed #e5e7eb;
-        border-radius: 16px;
-        padding: 20px;
-        text-align: center;
-    }
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
-</style>
-""", unsafe_allow_html=True)
+# 상단에 스위치 배치를 위한 컬럼 분할 (오른쪽 구석에 배치)
+top_col1, top_col2 = st.columns([10, 2])
+with top_col2:
+    high_contrast_on = st.toggle("High Contrast Mode")
 
 # ==========================================
-# 1. Custom Layers
+# 0-1. CSS 디자인 (스위치 상태에 따라 변경)
+# ==========================================
+if high_contrast_on:
+    # [고대비 모드] 검은 배경 + 형광 노랑 글씨
+    st.markdown("""
+    <style>
+        /* 전체 배경 및 폰트 강제 적용 */
+        .stApp {
+            background-color: #000000 !important;
+            color: #FFFF00 !important;
+        }
+        
+        /* 모든 텍스트 요소를 형광 노랑으로 강제 변환 */
+        h1, h2, h3, p, div, span, label, .stMarkdown {
+            color: #FFFF00 !important;
+            font-family: sans-serif !important;
+        }
+        
+        /* 버튼 스타일 (검정 배경/노랑 테두리) */
+        .stButton > button {
+            background-color: #000000 !important;
+            color: #FFFF00 !important;
+            border: 2px solid #FFFF00 !important;
+            border-radius: 10px !important;
+            font-weight: bold !important;
+        }
+        .stButton > button:hover {
+            background-color: #FFFF00 !important;
+            color: #000000 !important;
+        }
+        
+        /* 파일 업로더 테두리 */
+        .stFileUploader {
+            border: 2px dashed #FFFF00 !important;
+        }
+        
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
+
+else:
+    # [기존 디자인] 원래 쓰시던 하얀색 깔끔한 스타일 (그대로 유지)
+    st.markdown("""
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
+
+        html, body, [class*="css"] {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #ffffff;
+            color: #1c1917;
+        }
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif !important;
+            font-weight: 400;
+        }
+        .stButton > button {
+            background-color: #111111 !important;
+            color: white !important;
+            border-radius: 50px !important;
+            padding: 10px 30px !important;
+            border: none !important;
+            transition: transform 0.2s;
+        }
+        .stButton > button:hover {
+            transform: scale(1.02);
+            background-color: #333 !important;
+        }
+        .stFileUploader {
+            border: 2px dashed #e5e7eb;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# 1. Custom Layers (수정 없음)
 # ==========================================
 @keras.saving.register_keras_serializable()
 class Patches(layers.Layer):
@@ -93,11 +142,11 @@ class PatchEncoder(layers.Layer):
         return config
 
 # ==========================================
-# 2. 모델 로드
+# 2. 모델 로드 (수정 없음)
 # ==========================================
 @st.cache_resource
 def load_model_from_drive():
-    # 구글 드라이브 ID (유지)
+    # 구글 드라이브 ID
     file_id = '1QXUnKa3uCbK7kqgkXULYuEox0HGaE6hy' 
     url = f'https://drive.google.com/uc?id={file_id}'
     output = 'final_model.keras'
@@ -110,7 +159,7 @@ def load_model_from_drive():
     return model
 
 # ==========================================
-# 3. 메인 로직
+# 3. 메인 로직 (수정 없음)
 # ==========================================
 st.markdown("<h1 style='font-size: 3rem; margin-bottom: 0;'>For Visually Impaired,<br>Reading the Emotion Within.</h1>", unsafe_allow_html=True)
 st.markdown("<p style='color: #4b5563; margin-bottom: 40px;'>AI-POWERED SHADOW ANALYSIS</p>", unsafe_allow_html=True)
@@ -139,31 +188,24 @@ with col2:
             
             if st.button("Analyze Emotion"):
                 with st.spinner('Analyzing shadow contours...'):
-                    # 1. 이미지 전처리 (핵심 수정!)
-                    # / 255.0 을 제거했습니다. 0~255 범위의 값을 그대로 넣습니다.
+                    # 1. 이미지 전처리 (수정 안 함: 0~255 유지)
                     img_array = image.resize((224, 224))
                     img_array = np.array(img_array).astype("float32") 
-                    # img_array = img_array / 255.0  <-- 이 코드가 범인이었습니다! 삭제함.
                     
                     img_array = np.expand_dims(img_array, axis=0)
 
                     # 2. 예측
-                    # Sigmoid 대신 다시 Softmax를 쓰거나, 모델의 마지막 층에 따라 다름
-                    # 일단 logits 그대로 받아서 softmax로 확률화하는 것이 가장 일반적입니다.
                     predictions = model.predict(img_array)
                     probabilities = tf.nn.softmax(predictions).numpy()[0]
                     
                     # 🚨 클래스 이름 (알파벳 순서)
                     class_names = ["calm", "cold", "lonely", "warm"]
                     
-                    # 3. 디버깅용 확률 출력 (결과가 이상하면 이 숫자를 보세요)
-                    # st.write("각 감정별 확률:", {n: float(p) for n, p in zip(class_names, probabilities)})
-
                     idx = np.argmax(probabilities)
                     emotion = class_names[idx]
                     confidence = probabilities[idx]
 
-                    # 4. 결과 출력
+                    # 3. 결과 출력
                     st.divider()
                     if emotion == 'calm':
                         st.markdown("<h2 style='color: #d97706;'>🍃 calm</h2>", unsafe_allow_html=True)
@@ -180,7 +222,7 @@ with col2:
                     elif emotion == 'warm':
                         st.markdown("<h2 style='color: #ea580c;'>🌞 warm</h2>", unsafe_allow_html=True)
                         st.write("Strong energy and intensity detected.")
-                        st.audio("happy.m4a") 
+                        st.audio("warm.m4a") 
                     
                     st.caption(f"Confidence: {confidence*100:.2f}%")
 
