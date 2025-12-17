@@ -12,7 +12,7 @@ import random  # [Added] For random selection
 # ==========================================
 # 0. Page Config & High Contrast Switch
 # ==========================================
-st.set_page_config(page_title="Shadow Play", page_icon="🌗", layout="wide")
+st.set_page_config(page_title="Scenery Play", page_icon="🌗", layout="wide")
 
 # Column layout for the switch (top right)
 top_col1, top_col2 = st.columns([10, 2])
@@ -33,7 +33,7 @@ if high_contrast_on:
         }
         
         /* Force all text elements to neon yellow */
-        h1, h2, h3, p, div, span, label, .stMarkdown {
+        h1, h2, h3, p, div, span, label, .stMarkdown, .stCaption {
             color: #FFFF00 !important;
             font-family: sans-serif !important;
         }
@@ -143,7 +143,7 @@ class PatchEncoder(layers.Layer):
         return config
 
 # ==========================================
-# 2. Load Model (No Changes)
+# 2. Load Model & Session State
 # ==========================================
 @st.cache_resource
 def load_model_from_drive():
@@ -158,12 +158,17 @@ def load_model_from_drive():
     model = tf.keras.models.load_model(output, custom_objects={'Patches': Patches, 'PatchEncoder': PatchEncoder})
     return model
 
+# [Added] Initialize History in Session State
+if 'history' not in st.session_state:
+    st.session_state.history = []
+
 # ==========================================
-# 3. Main Logic (Updated with Random Music)
+# 3. Main Logic
 # ==========================================
 st.markdown("<h1 style='font-size: 3rem; margin-bottom: 0;'>For Visually Impaired,<br>Reading the Emotion Within.</h1>", unsafe_allow_html=True)
-st.markdown("<p style='color: #4b5563; margin-bottom: 40px;'>AI-POWERED SHADOW ANALYSIS</p>", unsafe_allow_html=True)
+st.markdown("<p style='color: #4b5563; margin-bottom: 40px;'>AI-POWERED SCENERY ANALYSIS</p>", unsafe_allow_html=True)
 
+# Layout: Info on Left, Uploader on Right
 col1, col2 = st.columns([1, 1])
 
 with col1:
@@ -171,8 +176,9 @@ with col1:
     <div style='border-top: 1px solid #e5e5e5; padding-top: 20px; margin-top: 20px;'>
         <p style='font-family: Playfair Display; font-style: italic; color: #9ca3af;'>Discover the unseen</p>
         <p style='line-height: 1.7; color: #4b5563;'>
-            Every shadow tells a story. Shadow Play uses advanced AI to reveal the hidden emotional landscape within your images.
+            Every scenery tells a story. Scenery Play uses advanced AI to reveal the hidden emotional landscape within your images.
         </p>
+        <p style='margin-top: 20px; font-weight: bold; color: #4b5563;'>👇 Previous Analysis Results are saved below 👇</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -181,13 +187,14 @@ with col2:
 
     if file is not None:
         image = Image.open(file).convert('RGB')
-        st.image(image, use_container_width=True)
+        st.image(image, caption="Current Upload", use_container_width=True)
         
         try:
             model = load_model_from_drive()
             
+            # Analyze Button
             if st.button("Analyze Emotion"):
-                with st.spinner('Analyzing shadow contours...'):
+                with st.spinner('Analyzing scenery contours...'):
                     # 1. Preprocessing
                     img_array = image.resize((224, 224))
                     img_array = np.array(img_array).astype("float32") 
@@ -203,42 +210,70 @@ with col2:
                     emotion = class_names[idx]
                     confidence = probabilities[idx]
 
-                    # ==========================================
-                    # [Updated] Random Music Logic
-                    # ==========================================
-                    # Select a random number between 1 and 5
+                    # 3. Random Music Logic
                     random_num = random.randint(1, 5)
-                    # Construct filename: e.g., "calm_3.m4a"
                     music_file = f"{emotion}_{random_num}.m4a"
-
-                    # 3. Output Results
-                    st.divider()
-                    if emotion == 'calm':
-                        st.markdown("<h2 style='color: #d97706;'>🍃 calm</h2>", unsafe_allow_html=True)
-                        st.write("Radiant warmth and joy detected.")
-                    elif emotion == 'cold':
-                        st.markdown("<h2 style='color: #dc2626;'>🔥 cold</h2>", unsafe_allow_html=True)
-                        st.write("Freezing cold.")
-                    elif emotion == 'lonely':
-                        st.markdown("<h2 style='color: #059669;'>🌑 lonely</h2>", unsafe_allow_html=True)
-                        st.write("Lonely.")
-                    elif emotion == 'warm':
-                        st.markdown("<h2 style='color: #ea580c;'>🌞 warm</h2>", unsafe_allow_html=True)
-                        st.write("Strong energy and intensity detected.")
                     
-                    # Play Audio
-                    if os.path.exists(music_file):
-                        # Optional: Display track info
-                        # st.write(f"Playing Track: {music_file}") 
-                        st.audio(music_file)
-                    else:
-                        st.warning(f"Audio file not found: {music_file}")
-                        # Fallback: Try playing the 1st track if the random one fails
-                        backup = f"{emotion}_1.m4a"
-                        if os.path.exists(backup):
-                            st.audio(backup)
-
-                    st.caption(f"Confidence: {confidence*100:.2f}%")
+                    # 4. Save to Session State History
+                    result = {
+                        "image": image,
+                        "emotion": emotion,
+                        "confidence": confidence,
+                        "music_file": music_file
+                    }
+                    st.session_state.history.append(result)
+                    
+                    st.success("Analysis Complete! Scroll down to see the results.")
 
         except Exception as e:
             st.error(f"오류가 발생했습니다.: {e}")
+
+# ==========================================
+# 4. Display History (Saved Results)
+# ==========================================
+if st.session_state.history:
+    st.markdown("---")
+    st.subheader("🕰️ Analysis History")
+    
+    # Show newest first (reversed)
+    for i, item in enumerate(reversed(st.session_state.history)):
+        st.markdown(f"### Result {len(st.session_state.history) - i}")
+        
+        # Create columns for each history item
+        h_col1, h_col2 = st.columns([1, 2])
+        
+        with h_col1:
+            st.image(item['image'], use_container_width=True)
+            
+        with h_col2:
+            emotion = item['emotion']
+            confidence = item['confidence']
+            music_file = item['music_file']
+            
+            if emotion == 'calm':
+                st.markdown("<h2 style='color: #d97706;'>🍃 calm</h2>", unsafe_allow_html=True)
+                st.write("Radiant warmth and joy detected.")
+            elif emotion == 'cold':
+                st.markdown("<h2 style='color: #dc2626;'>🔥 cold</h2>", unsafe_allow_html=True)
+                st.write("Freezing cold.")
+            elif emotion == 'lonely':
+                st.markdown("<h2 style='color: #059669;'>🌑 lonely</h2>", unsafe_allow_html=True)
+                st.write("Lonely.")
+            elif emotion == 'warm':
+                st.markdown("<h2 style='color: #ea580c;'>🌞 warm</h2>", unsafe_allow_html=True)
+                st.write("Strong energy and intensity detected.")
+            
+            # Play Audio
+            if os.path.exists(music_file):
+                st.audio(music_file)
+            else:
+                # Check for backup only if main file fails
+                backup = f"{emotion}_1.m4a"
+                if os.path.exists(backup):
+                    st.audio(backup)
+                else:
+                    st.warning("Audio file not found.")
+
+            st.caption(f"Confidence: {confidence*100:.2f}%")
+        
+        st.divider()
